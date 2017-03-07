@@ -22,9 +22,16 @@ private slots:
     void on_action_Quit_triggered();
     void on_start_pushButton_clicked();
 
+    void srcReply_readyRead();
+    void srcReply_finished();
+    void dstReply_uploadProgress(qint64 bytes, qint64 totalBytes);
+    void dstReply_finished();
+
 private:
     Ui::MainWindow *ui;
     QNetworkAccessManager *m_nam;
+    QNetworkReply *m_srcReply;
+    QNetworkReply *m_dstReply;
 };
 
 

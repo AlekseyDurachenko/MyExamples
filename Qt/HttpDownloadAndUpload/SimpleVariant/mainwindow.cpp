@@ -41,21 +41,45 @@ void MainWindow::on_start_pushButton_clicked()
         return;
     }
 
-    // upload file with bloking
-    QNetworkReply *srcReply = m_nam->get(QNetworkRequest(srcUrl));
-    QNetworkReply *dstReply = m_nam->put(QNetworkRequest(dstUrl), srcReply);
-    connect(srcReply, &QNetworkReply::readyRead, [=]() {
-        qDebug() << "src readyRead = " << srcReply->bytesAvailable();
-    });
-    connect(srcReply, &QNetworkReply::finished, [=]() {
-        qDebug() << "src finished = " << srcReply->errorString() << srcReply->bytesAvailable();
-        srcReply->deleteLater();
-    });
-    connect(dstReply, &QNetworkReply::uploadProgress, [=](qint64 bytes, qint64 bytesTotal) {
-        qDebug() << "dst upload progress =" << bytes << bytesTotal;
-    });
-    connect(dstReply, &QNetworkReply::finished, [=]() {
-        qDebug() << "dst finished = " << dstReply->errorString();
-        dstReply->deleteLater();
-    });
+    // download && upload file
+    m_srcReply = m_nam->get(QNetworkRequest(srcUrl));
+    m_dstReply = 0;
+
+    connect(m_srcReply, SIGNAL(readyRead()), SLOT(srcReply_readyRead()));
+    connect(m_srcReply, SIGNAL(finished()), SLOT(srcReply_finished()));
+}
+
+void MainWindow::srcReply_readyRead()
+{
+    qDebug() << "srcReply_readyRead()" << m_srcReply->bytesAvailable();
+
+    if (!m_dstReply) {
+        QNetworkRequest dstRequest = QNetworkRequest(QUrl(ui->dst_lineEdit->text()));
+        dstRequest.setAttribute(QNetworkRequest::DoNotBufferUploadDataAttribute, true);
+        dstRequest.setHeader(QNetworkRequest::ContentLengthHeader, m_srcReply->header(QNetworkRequest::ContentLengthHeader));
+        m_dstReply = m_nam->put(dstRequest, m_srcReply);
+
+        connect(m_dstReply, SIGNAL(uploadProgress(qint64,qint64)), this, SLOT(dstReply_uploadProgress(qint64,qint64)));
+        connect(m_dstReply, SIGNAL(finished()), this, SLOT(dstReply_finished()));
+    }
+}
+
+void MainWindow::srcReply_finished()
+{
+    qDebug() << "srcReply_finished()" << m_srcReply->errorString() << m_srcReply->bytesAvailable();
+    // do not remove before dstReply_finished() (!!!!!!!!!)
+    //m_srcReply->deleteLater();
+}
+
+void MainWindow::dstReply_uploadProgress(qint64 bytes, qint64 totalBytes)
+{
+    qDebug() << "dstReply_uploadProgress()" << bytes << totalBytes;
+}
+
+void MainWindow::dstReply_finished()
+{
+    qDebug() << "dstReply_finished()" << m_dstReply->errorString();
+    m_dstReply->deleteLater();
+    m_srcReply->deleteLater();
+    QMessageBox::information(this, tr("information"), tr("Done!"));
 }
