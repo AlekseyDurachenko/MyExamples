@@ -49,11 +49,13 @@ void MainWindow::on_start_pushButton_clicked()
     });
     connect(srcReply, &QNetworkReply::finished, [=]() {
         qDebug() << "src finished = " << srcReply->errorString() << srcReply->bytesAvailable();
+        srcReply->deleteLater();
     });
     connect(dstReply, &QNetworkReply::uploadProgress, [=](qint64 bytes, qint64 bytesTotal) {
         qDebug() << "dst upload progress =" << bytes << bytesTotal;
     });
     connect(dstReply, &QNetworkReply::finished, [=]() {
         qDebug() << "dst finished = " << dstReply->errorString();
+        dstReply->deleteLater();
     });
 }
